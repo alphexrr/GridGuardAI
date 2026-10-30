@@ -1,0 +1,1714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GRID GUARD AI - 3D Cyber-Physical Digital Twin</title>
+    <!-- Three.js & OrbitControls via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        :root {
+            --bg-dark: #070B19;
+            --panel-bg: rgba(13, 22, 44, 0.88);
+            --border-glow: rgba(0, 240, 255, 0.35);
+            --electric-blue: #00F0FF;
+            --teal: #48E5C2;
+            --normal-green: #00E676;
+            --fault-red: #FF3366;
+            --degrad-amber: #FFA400;
+            --cyber-purple: #B026FF;
+            --text-main: #F1F5F9;
+            --text-muted: #94A3B8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #webgl-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Top Header Bar */
+        .hud-header {
+            position: absolute;
+            top: 14px;
+            left: 18px;
+            right: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .brand-box {
+            background: linear-gradient(135deg, rgba(20, 32, 60, 0.9) 0%, rgba(9, 15, 33, 0.95) 100%);
+            border: 1px solid var(--border-glow);
+            border-radius: 12px;
+            padding: 10px 20px;
+            box-shadow: 0 8px 32px rgba(0, 240, 255, 0.15), inset 0 0 16px rgba(0, 240, 255, 0.08);
+            backdrop-filter: blur(12px);
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand-logo-glow {
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            background: radial-gradient(circle, rgba(0, 240, 255, 0.4) 0%, rgba(13, 22, 44, 0.9) 100%);
+            border: 1px solid var(--electric-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
+            animation: pulse-icon 2s infinite alternate;
+        }
+
+        @keyframes pulse-icon {
+            0% { box-shadow: 0 0 8px rgba(0, 240, 255, 0.3); }
+            100% { box-shadow: 0 0 20px rgba(0, 240, 255, 0.7); }
+        }
+
+        .brand-title {
+            font-size: 1.35rem;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            background: linear-gradient(90deg, #FFFFFF 0%, #00F0FF 50%, #48E5C2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-sub {
+            font-size: 0.74rem;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+            margin-top: 1px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
+        }
+
+        .glass-btn {
+            background: rgba(20, 32, 60, 0.85);
+            border: 1px solid var(--border-glow);
+            color: var(--text-main);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        }
+
+        .glass-btn:hover {
+            border-color: var(--electric-blue);
+            color: var(--electric-blue);
+            box-shadow: 0 0 16px rgba(0, 240, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .glass-btn.active-pulse {
+            border-color: var(--normal-green);
+            color: var(--normal-green);
+            box-shadow: 0 0 16px rgba(0, 230, 118, 0.4);
+        }
+
+        /* Left Sensor HUD Panel */
+        .hud-left {
+            position: absolute;
+            top: 85px;
+            left: 18px;
+            width: 330px;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: auto;
+            max-height: calc(100vh - 150px);
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+        .hud-left::-webkit-scrollbar { display: none; }
+
+        .panel-card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-glow);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(0, 240, 255, 0.04);
+            backdrop-filter: blur(16px);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(58, 80, 107, 0.5);
+            padding-bottom: 8px;
+        }
+
+        .panel-title {
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            color: var(--electric-blue);
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Live Data Ingestion Pulse Indicator */
+        .live-pulse-badge {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--normal-green);
+            background: rgba(0, 230, 118, 0.12);
+            padding: 2px 7px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 230, 118, 0.3);
+        }
+
+        .dot-pulse {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--normal-green);
+            box-shadow: 0 0 8px var(--normal-green);
+            animation: live-blink 1s infinite alternate;
+        }
+
+        @keyframes live-blink {
+            0% { opacity: 0.3; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1.2); }
+        }
+
+        /* Status Badge */
+        .status-badge {
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 4px 9px;
+            border-radius: 6px;
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+        .status-normal {
+            background: rgba(0, 230, 118, 0.18);
+            color: var(--normal-green);
+            border: 1px solid var(--normal-green);
+            box-shadow: 0 0 12px rgba(0, 230, 118, 0.3);
+        }
+        .status-fault {
+            background: rgba(255, 51, 102, 0.22);
+            color: var(--fault-red);
+            border: 1px solid var(--fault-red);
+            box-shadow: 0 0 16px rgba(255, 51, 102, 0.4);
+            animation: pulse-red 0.9s infinite;
+        }
+        .status-degradation {
+            background: rgba(255, 164, 0, 0.2);
+            color: var(--degrad-amber);
+            border: 1px solid var(--degrad-amber);
+            box-shadow: 0 0 14px rgba(255, 164, 0, 0.35);
+        }
+        .status-manipulation {
+            background: rgba(176, 38, 255, 0.22);
+            color: var(--cyber-purple);
+            border: 1px solid var(--cyber-purple);
+            box-shadow: 0 0 16px rgba(176, 38, 255, 0.4);
+            animation: glitch-box 1.2s infinite;
+        }
+
+        @keyframes pulse-red {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.97); }
+        }
+
+        /* Metric Rows */
+        .metric-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .metric-box {
+            background: rgba(20, 32, 60, 0.6);
+            border: 1px solid rgba(58, 80, 107, 0.5);
+            border-radius: 9px;
+            padding: 10px 11px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-box:hover, .metric-box.active {
+            border-color: var(--electric-blue);
+            background: rgba(0, 240, 255, 0.12);
+            box-shadow: 0 0 14px rgba(0, 240, 255, 0.25);
+            transform: translateY(-2px);
+        }
+
+        .metric-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            background: var(--electric-blue);
+        }
+        .box-voltage::before { background: #00F0FF; }
+        .box-current::before { background: #FFD166; }
+        .box-temp::before { background: #FF5252; }
+        .box-vib::before { background: #48E5C2; }
+
+        .m-label {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+        }
+
+        .m-value {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: #FFFFFF;
+            margin-top: 2px;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.5px;
+        }
+
+        .m-delta {
+            font-size: 0.66rem;
+            color: #64748B;
+            margin-top: 2px;
+        }
+
+        /* Live Mini-Oscilloscope Waveform Display */
+        .waveform-container {
+            margin-top: 10px;
+            background: rgba(7, 13, 28, 0.95);
+            border: 1px solid rgba(0, 240, 255, 0.25);
+            border-radius: 8px;
+            padding: 8px 10px;
+        }
+
+        .waveform-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        #oscilloscope-canvas {
+            width: 100%;
+            height: 48px;
+            display: block;
+            border-radius: 4px;
+            background: #030712;
+        }
+
+        /* Diagnostic Explanation Box */
+        .diag-box {
+            margin-top: 10px;
+            background: rgba(10, 18, 38, 0.95);
+            border-left: 3px solid var(--electric-blue);
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 0.74rem;
+            line-height: 1.45;
+            color: #CBD5E1;
+            box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Right Control & Scenario Panel */
+        .hud-right {
+            position: absolute;
+            top: 85px;
+            right: 18px;
+            width: 310px;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: auto;
+            max-height: calc(100vh - 150px);
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+        .hud-right::-webkit-scrollbar { display: none; }
+
+        .scenario-btn {
+            width: 100%;
+            padding: 9px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(58, 80, 107, 0.5);
+            background: rgba(20, 32, 60, 0.75);
+            color: var(--text-main);
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .scenario-btn:hover {
+            border-color: var(--electric-blue);
+            background: rgba(0, 240, 255, 0.16);
+            transform: translateX(-3px);
+        }
+
+        .scenario-btn.active {
+            border-color: var(--electric-blue);
+            background: linear-gradient(90deg, rgba(0, 240, 255, 0.3) 0%, rgba(20, 32, 60, 0.85) 100%);
+            box-shadow: 0 0 16px rgba(0, 240, 255, 0.3);
+        }
+
+        /* Camera Views Bar */
+        .cam-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            margin-top: 4px;
+        }
+
+        .cam-btn {
+            background: rgba(20, 32, 60, 0.65);
+            border: 1px solid rgba(58, 80, 107, 0.5);
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            padding: 7px 4px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+        .cam-btn:hover {
+            color: var(--electric-blue);
+            border-color: var(--electric-blue);
+            background: rgba(0, 240, 255, 0.1);
+        }
+
+        /* Guided Tour Button */
+        .tour-btn {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--teal);
+            background: linear-gradient(135deg, rgba(72, 229, 194, 0.2) 0%, rgba(20, 32, 60, 0.8) 100%);
+            color: #FFFFFF;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 14px rgba(72, 229, 194, 0.2);
+        }
+        .tour-btn:hover {
+            border-color: #FFFFFF;
+            box-shadow: 0 0 20px rgba(72, 229, 194, 0.5);
+            transform: translateY(-2px);
+        }
+
+        /* Bottom Live Telemetry Stream Ticker */
+        .hud-bottom {
+            position: absolute;
+            bottom: 14px;
+            left: 18px;
+            right: 18px;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(10, 17, 35, 0.9);
+            border: 1px solid var(--border-glow);
+            border-radius: 10px;
+            padding: 8px 18px;
+            font-size: 0.76rem;
+            color: var(--text-muted);
+            backdrop-filter: blur(12px);
+            pointer-events: auto;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
+        }
+
+        .ticker-data {
+            font-family: 'Consolas', 'Courier New', monospace;
+            color: var(--teal);
+            font-weight: 600;
+        }
+
+        /* Expandable Telemetry Buffer Drawer */
+        #telemetry-drawer {
+            position: absolute;
+            bottom: 58px;
+            left: 18px;
+            right: 18px;
+            max-height: 160px;
+            background: rgba(9, 15, 33, 0.96);
+            border: 1px solid var(--border-glow);
+            border-radius: 10px;
+            z-index: 9;
+            padding: 12px 16px;
+            display: none;
+            overflow-y: auto;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+        }
+
+        .drawer-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.72rem;
+            font-family: 'Consolas', monospace;
+        }
+        .drawer-table th {
+            color: var(--electric-blue);
+            text-align: left;
+            padding: 4px 8px;
+            border-bottom: 1px solid rgba(58, 80, 107, 0.6);
+        }
+        .drawer-table td {
+            padding: 4px 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: #CBD5E1;
+        }
+
+        /* 3D Sensor Tooltip */
+        #sensor-tooltip {
+            position: absolute;
+            display: none;
+            background: rgba(9, 16, 35, 0.96);
+            border: 1px solid var(--electric-blue);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.74rem;
+            color: #FFFFFF;
+            pointer-events: none;
+            z-index: 100;
+            box-shadow: 0 8px 24px rgba(0, 240, 255, 0.4);
+            max-width: 250px;
+            line-height: 1.45;
+            backdrop-filter: blur(12px);
+        }
+
+        .tooltip-title {
+            font-weight: 800;
+            color: var(--electric-blue);
+            margin-bottom: 3px;
+            font-size: 0.78rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="webgl-container"></div>
+    <div id="sensor-tooltip"></div>
+
+    <!-- Top Header -->
+    <div class="hud-header">
+        <div class="brand-box">
+            <div class="brand-logo-glow">G</div>
+            <div>
+                <div class="brand-title">GRID GUARD &bull; 3D DIGITAL TWIN</div>
+                <div class="brand-sub">Live Cyber-Physical Telemetry Collection & Substation Diagnostics</div>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="glass-btn" id="btn-stream" onclick="toggleStreamMode()">
+                <span id="stream-icon"></span> Mode: <strong id="stream-mode-label" style="color: #00E676;">LIVE (10 Hz)</strong>
+            </button>
+            <button class="glass-btn" id="btn-sound" onclick="toggleAudio()">
+                <span id="sound-icon"></span> Audio: ON
+            </button>
+            <button class="glass-btn" onclick="toggleAutoRotate()" id="btn-autorotate">
+                <span></span> Auto-Orbit: OFF
+            </button>
+            <button class="glass-btn" onclick="toggleFullscreen()">
+                <span>[ ⛶ ]</span> FULLSCREEN
+            </button>
+        </div>
+    </div>
+
+    <!-- Left Real-Time Sensor Telemetry Ingestion Panel -->
+    <div class="hud-left">
+        <div class="panel-card">
+            <div class="panel-header">
+                <span class="panel-title">
+                    <span></span> LIVE SENSOR INGESTION
+                </span>
+                <span class="live-pulse-badge">
+                    <span class="dot-pulse"></span> STREAMING
+                </span>
+            </div>
+
+            <!-- Overall System Condition Badge -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span style="font-size: 0.72rem; color: #94A3B8; font-weight: 600;">GRID CONDITION:</span>
+                <span class="status-badge status-normal" id="status-badge">● NOMINAL</span>
+            </div>
+
+            <!-- The 4 Core Telemetry Metrics -->
+            <div class="metric-grid">
+                <div class="metric-box box-voltage" id="box-v" onclick="focusSensor(0)">
+                    <div class="m-label">Voltage (Bus S-1)</div>
+                    <div class="m-value" id="val-v">230.1 V</div>
+                    <div class="m-delta" id="delta-v">&plusmn;0.1V IEEE Normal</div>
+                </div>
+                <div class="metric-box box-current" id="box-i" onclick="focusSensor(1)">
+                    <div class="m-label">Current (CT S-2)</div>
+                    <div class="m-value" id="val-i">24.2 A</div>
+                    <div class="m-delta" id="delta-i">Load: 5.5 kVA</div>
+                </div>
+                <div class="metric-box box-temp" id="box-t" onclick="focusSensor(2)">
+                    <div class="m-label">Temp (RTD S-3)</div>
+                    <div class="m-value" id="val-t">41.8 °C</div>
+                    <div class="m-delta" id="delta-t">Trip Limit: 78°C</div>
+                </div>
+                <div class="metric-box box-vib" id="box-vib" onclick="focusSensor(3)">
+                    <div class="m-label">Vibration (Piezo)</div>
+                    <div class="m-value" id="val-vib">1.35 mm/s</div>
+                    <div class="m-delta" id="delta-vib">50Hz Core Hum</div>
+                </div>
+            </div>
+
+            <!-- Live Mini-Oscilloscope Waveform Display -->
+            <div class="waveform-container">
+                <div class="waveform-header">
+                    <span>LIVE AC VOLTAGE & CURRENT WAVEFORM</span>
+                    <span id="wave-freq">50.0 Hz</span>
+                </div>
+                <canvas id="oscilloscope-canvas" width="290" height="48"></canvas>
+            </div>
+
+            <!-- AI Diagnostic Explanation Box -->
+            <div class="diag-box" id="diag-explanation">
+                <strong>AI Root-Cause:</strong> All parameters strictly within IEEE 1159 electrical safety band. No anomalies detected.
+            </div>
+        </div>
+
+        <!-- Physical Sensor Probe Details -->
+        <div class="panel-card" style="padding: 12px;">
+            <div class="panel-header" style="margin-bottom: 6px; padding-bottom: 4px;">
+                <span class="panel-title" style="font-size: 0.74rem;">Selected Sensor Probe</span>
+                <span style="font-size: 0.68rem; color: #48E5C2;">Click marker to inspect</span>
+            </div>
+            <div id="sensor-specs" style="font-size: 0.73rem; color: #CBD5E1; line-height: 1.45;">
+                <span style="color: var(--electric-blue); font-weight: 700;">S-01 Potential Transformer (PT):</span> Primary busbar potential sensor detecting sags (<185V) and surges (>260V).
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Controls, Scenarios & Camera Tour -->
+    <div class="hud-right">
+        <!-- Guided Tour Button -->
+        <button class="tour-btn" onclick="startGuidedTour()">
+            <span>[ TOUR ]</span> START GUIDED SENSOR TOUR
+        </button>
+
+        <!-- Scenario Injections -->
+        <div class="panel-card">
+            <div class="panel-header">
+                <span class="panel-title">Fault Injection Scenarios</span>
+                <span style="font-size: 0.68rem; color: #48E5C2;">Live Simulation</span>
+            </div>
+            <button class="scenario-btn active" id="btn-scen-normal" onclick="setScenario('normal')">
+                <span>1. Nominal Grid Baseline</span>
+                <small style="color: #00E676;">230V / 24A</small>
+            </button>
+            <button class="scenario-btn" id="btn-scen-fault" onclick="setScenario('physical_fault')">
+                <span>2. Short-Circuit Fault</span>
+                <small style="color: #FF3366;">154V / 98A</small>
+            </button>
+            <button class="scenario-btn" id="btn-scen-degrad" onclick="setScenario('degradation')">
+                <span>3. Thermal Degradation</span>
+                <small style="color: #FFA400;">73°C / 4.6mm/s</small>
+            </button>
+            <button class="scenario-btn" id="btn-scen-manip" onclick="setScenario('data_manipulation')">
+                <span>4. False Data Injection</span>
+                <small style="color: #B026FF;">Cyber Spoof</small>
+            </button>
+        </div>
+
+        <!-- Camera Views -->
+        <div class="panel-card">
+            <div class="panel-header">
+                <span class="panel-title">Camera Angles</span>
+                <span style="font-size: 0.68rem; color: #94A3B8;">Presets</span>
+            </div>
+            <div class="cam-row">
+                <div class="cam-btn" onclick="setCameraView('iso')">Isometric</div>
+                <div class="cam-btn" onclick="setCameraView('hv')">HV Bushings</div>
+                <div class="cam-btn" onclick="setCameraView('panel')">Marshalling</div>
+                <div class="cam-btn" onclick="setCameraView('thermal')">RTD Well</div>
+                <div class="cam-btn" onclick="setCameraView('top')">Top-Down</div>
+                <div class="cam-btn" onclick="setCameraView('radiator')">Radiators</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expandable Telemetry Buffer Drawer -->
+    <div id="telemetry-drawer">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <strong style="color: var(--electric-blue); font-size: 0.75rem;">LIVE TELEMETRY INGESTION BUFFER (Recent 8 Packets)</strong>
+            <button class="glass-btn" style="padding: 2px 8px; font-size: 0.7rem;" onclick="toggleDrawer()">Close &times;</button>
+        </div>
+        <table class="drawer-table">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Voltage (V)</th>
+                    <th>Current (A)</th>
+                    <th>Temp (°C)</th>
+                    <th>Vib (mm/s)</th>
+                    <th>Condition State</th>
+                    <th>Confidence</th>
+                </tr>
+            </thead>
+            <tbody id="telemetry-table-body">
+                <!-- Dynamically populated rows -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Bottom Telemetry Ticker -->
+    <div class="hud-bottom">
+        <div>
+            <span style="color: #64748B;">STREAM:</span> 
+            <span class="ticker-data" id="stream-ticker">V=230.1V | I=24.2A | T=41.8°C | Vib=1.35mm/s</span>
+        </div>
+        <div style="display: flex; gap: 14px; align-items: center;">
+            <button class="glass-btn" style="padding: 3px 8px; font-size: 0.7rem;" onclick="toggleDrawer()">
+                <span>📋</span> View Data Log
+            </button>
+            <span>IEEE 1159: <strong style="color: var(--normal-green);">COMPLIANT</strong></span>
+            <span>Rate: <strong style="color: var(--electric-blue);">10 Hz</strong></span>
+            <span>Clock: <strong id="sim-clock" style="color: #FFFFFF;">00:00:00</strong></span>
+        </div>
+    </div>
+
+    <!-- Three.js 3D Engine Script -->
+    <script>
+        // -------------------------------------------------------------
+        // 1. SCENE, CAMERA, & RENDERER SETUP
+        // -------------------------------------------------------------
+        const container = document.getElementById('webgl-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x070B19);
+        scene.fog = new THREE.FogExp2(0x070B19, 0.028);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(12, 8.5, 13);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.02; // Don't clip through ground
+        controls.minDistance = 4;
+        controls.maxDistance = 35;
+        controls.target.set(0, 1.8, 0);
+
+        // -------------------------------------------------------------
+        // 2. VIBRANT CYBER-PHYSICAL LIGHTING
+        // -------------------------------------------------------------
+        const ambientLight = new THREE.AmbientLight(0x131E3A, 2.0);
+        scene.add(ambientLight);
+
+        const mainSun = new THREE.DirectionalLight(0xE2F1FF, 2.2);
+        mainSun.position.set(12, 22, 10);
+        mainSun.castShadow = true;
+        mainSun.shadow.mapSize.width = 2048;
+        mainSun.shadow.mapSize.height = 2048;
+        mainSun.shadow.bias = -0.0005;
+        scene.add(mainSun);
+
+        // Vibrant Rim Lights for Dramatic Cybernetic Glow
+        const cyanRim = new THREE.PointLight(0x00F0FF, 3.5, 30);
+        cyanRim.position.set(-8, 9, -8);
+        scene.add(cyanRim);
+
+        const magentaRim = new THREE.PointLight(0xB026FF, 2.5, 25);
+        magentaRim.position.set(8, 7, -8);
+        scene.add(magentaRim);
+
+        // Condition Status Beacon on Top of Transformer
+        const statusBeaconLight = new THREE.PointLight(0x00E676, 4.0, 16);
+        statusBeaconLight.position.set(0, 4.8, 0);
+        scene.add(statusBeaconLight);
+
+        // Glowing Ground Hex/Grid Mesh
+        const gridHelper = new THREE.GridHelper(34, 34, 0x00F0FF, 0x162444);
+        gridHelper.position.y = -0.01;
+        scene.add(gridHelper);
+
+        // -------------------------------------------------------------
+        // 3. 3D POWER TRANSFORMER MODEL (ENHANCED DETAIL & FEATURES)
+        // -------------------------------------------------------------
+        const transformerGroup = new THREE.Group();
+        scene.add(transformerGroup);
+
+        // Materials
+        const tankMaterial = new THREE.MeshStandardMaterial({
+            color: 0x1E2D4A,
+            metalness: 0.85,
+            roughness: 0.25,
+            envMapIntensity: 1.2
+        });
+
+        const darkMetalMaterial = new THREE.MeshStandardMaterial({
+            color: 0x111928,
+            metalness: 0.9,
+            roughness: 0.35
+        });
+
+        const copperMaterial = new THREE.MeshStandardMaterial({
+            color: 0xE08838,
+            metalness: 0.95,
+            roughness: 0.15
+        });
+
+        const ceramicPorcelain = new THREE.MeshStandardMaterial({
+            color: 0x8E3B29, // Terracotta porcelain
+            roughness: 0.25,
+            metalness: 0.15
+        });
+
+        const neonConduitMaterial = new THREE.MeshBasicMaterial({
+            color: 0x00F0FF,
+            wireframe: false
+        });
+
+        // A. Heavy Concrete Mounting Base with Hazard Warning Chamfer
+        const baseGeo = new THREE.BoxGeometry(7.0, 0.45, 6.0);
+        const baseMesh = new THREE.Mesh(baseGeo, new THREE.MeshStandardMaterial({ color: 0x222E42, roughness: 0.9 }));
+        baseMesh.position.y = 0.22;
+        baseMesh.receiveShadow = true;
+        transformerGroup.add(baseMesh);
+
+        // Hazard Boundary Striping
+        const stripeGeo = new THREE.BoxGeometry(7.1, 0.06, 6.1);
+        const stripeMesh = new THREE.Mesh(stripeGeo, new THREE.MeshBasicMaterial({ color: 0xFFA400, wireframe: true }));
+        stripeMesh.position.y = 0.46;
+        transformerGroup.add(stripeMesh);
+
+        // B. Main Transformer Steel Tank Housing
+        const tankGeo = new THREE.BoxGeometry(3.8, 2.7, 2.4);
+        const tankMesh = new THREE.Mesh(tankGeo, tankMaterial);
+        tankMesh.position.y = 1.8;
+        tankMesh.castShadow = true;
+        tankMesh.receiveShadow = true;
+        transformerGroup.add(tankMesh);
+
+        // Tank Top Cover Flange
+        const topCoverGeo = new THREE.BoxGeometry(4.0, 0.16, 2.6);
+        const topCoverMesh = new THREE.Mesh(topCoverGeo, darkMetalMaterial);
+        topCoverMesh.position.y = 3.2;
+        topCoverMesh.castShadow = true;
+        transformerGroup.add(topCoverMesh);
+
+        // C. Status Beacon Lamp on Top Cover
+        const beaconBase = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.15, 16), darkMetalMaterial);
+        beaconBase.position.set(0, 3.35, 0);
+        transformerGroup.add(beaconBase);
+
+        const beaconDomeGeo = new THREE.SphereGeometry(0.12, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+        const beaconDomeMat = new THREE.MeshStandardMaterial({
+            color: 0x00E676,
+            emissive: 0x00E676,
+            emissiveIntensity: 1.5,
+            roughness: 0.1,
+            transparent: true,
+            opacity: 0.9
+        });
+        const beaconDome = new THREE.Mesh(beaconDomeGeo, beaconDomeMat);
+        beaconDome.position.set(0, 3.42, 0);
+        transformerGroup.add(beaconDome);
+
+        // D. Dual Radiator Cooling Fins with Animated Spinning Fan Blades!
+        const fanBladesList = [];
+
+        function createRadiatorAssembly(side) {
+            const radGroup = new THREE.Group();
+            const finCount = 8;
+            const finSpacing = 0.28;
+
+            for (let i = 0; i < finCount; i++) {
+                const finGeo = new THREE.BoxGeometry(0.04, 1.9, 0.8);
+                const fin = new THREE.Mesh(finGeo, darkMetalMaterial);
+                fin.position.z = (i - finCount / 2 + 0.5) * finSpacing;
+                fin.castShadow = true;
+                radGroup.add(fin);
+            }
+
+            // Upper & Lower Manifold Connecting Pipes
+            const pipeGeo = new THREE.CylinderGeometry(0.09, 0.09, 2.4, 16);
+            const topPipe = new THREE.Mesh(pipeGeo, darkMetalMaterial);
+            topPipe.rotation.x = Math.PI / 2;
+            topPipe.position.set(0, 0.85, 0);
+            radGroup.add(topPipe);
+
+            const botPipe = topPipe.clone();
+            botPipe.position.y = -0.85;
+            radGroup.add(botPipe);
+
+            // Active Cooling Fan Cages attached to radiator outer face
+            for (let f = 0; f < 2; f++) {
+                const fanCage = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.12, 20), darkMetalMaterial);
+                fanCage.rotation.z = Math.PI / 2;
+                fanCage.position.set(side * 0.45, (f === 0 ? 0.4 : -0.4), 0);
+                radGroup.add(fanCage);
+
+                // 4-Blade Impeller
+                const bladeGroup = new THREE.Group();
+                for (let b = 0; b < 4; b++) {
+                    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.32, 0.02), new THREE.MeshBasicMaterial({ color: 0x00F0FF }));
+                    blade.rotation.z = (b * Math.PI) / 2;
+                    bladeGroup.add(blade);
+                }
+                bladeGroup.position.copy(fanCage.position);
+                bladeGroup.position.x += side * 0.05;
+                radGroup.add(bladeGroup);
+                fanBladesList.push(bladeGroup);
+            }
+
+            radGroup.position.set(side * 2.2, 1.8, 0);
+            return radGroup;
+        }
+        transformerGroup.add(createRadiatorAssembly(1));
+        transformerGroup.add(createRadiatorAssembly(-1));
+
+        // E. Conservator Tank & Dehydrating Breather
+        const conservatorGeo = new THREE.CylinderGeometry(0.48, 0.48, 2.8, 24);
+        const conservatorMesh = new THREE.Mesh(conservatorGeo, tankMaterial);
+        conservatorMesh.rotation.z = Math.PI / 2;
+        conservatorMesh.position.set(0, 3.95, -0.65);
+        conservatorMesh.castShadow = true;
+        transformerGroup.add(conservatorMesh);
+
+        // Support Brackets
+        const strut1 = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.8, 12), darkMetalMaterial);
+        strut1.position.set(1.0, 3.5, -0.65);
+        const strut2 = strut1.clone();
+        strut2.position.x = -1.0;
+        transformerGroup.add(strut1);
+        transformerGroup.add(strut2);
+
+        // Breather Pipe & Glowing Blue Silica-Gel Pot
+        const breatherPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.3, 12), darkMetalMaterial);
+        breatherPipe.position.set(1.4, 3.3, -0.65);
+        transformerGroup.add(breatherPipe);
+
+        const silicaPot = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.14, 0.14, 0.38, 16),
+            new THREE.MeshStandardMaterial({
+                color: 0x00F0FF,
+                roughness: 0.1,
+                transparent: true,
+                opacity: 0.85,
+                emissive: 0x00F0FF,
+                emissiveIntensity: 0.6
+            })
+        );
+        silicaPot.position.set(1.4, 2.55, -0.65);
+        transformerGroup.add(silicaPot);
+
+        // F. High Voltage (HV) Porcelain Bushings with Lightning Surge Arresters
+        function createHVBushingWithArrester(xPos) {
+            const bushingGroup = new THREE.Group();
+            const shedCount = 6;
+            for (let s = 0; s < shedCount; s++) {
+                const shedGeo = new THREE.CylinderGeometry(0.17 - s * 0.015, 0.23 - s * 0.015, 0.13, 20);
+                const shed = new THREE.Mesh(shedGeo, ceramicPorcelain);
+                shed.position.y = s * 0.16;
+                shed.castShadow = true;
+                bushingGroup.add(shed);
+            }
+            // Central Copper Conductor Rod
+            const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.4, 16), copperMaterial);
+            rod.position.y = 0.55;
+            bushingGroup.add(rod);
+
+            // Corona Ring on top
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.022, 12, 24), copperMaterial);
+            ring.rotation.x = Math.PI / 2;
+            ring.position.y = 1.15;
+            bushingGroup.add(ring);
+
+            bushingGroup.position.set(xPos, 3.25, 0.45);
+            return bushingGroup;
+        }
+
+        transformerGroup.add(createHVBushingWithArrester(-1.1));
+        transformerGroup.add(createHVBushingWithArrester(0.0));
+        transformerGroup.add(createHVBushingWithArrester(1.1));
+
+        // G. Low Voltage (LV) Secondary Bushings (4 Bushings: 3-Phase + Neutral)
+        function createLVBushing(xPos) {
+            const lvGroup = new THREE.Group();
+            const shed = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.13, 0.38, 16), ceramicPorcelain);
+            lvGroup.add(shed);
+            const stud = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.6, 12), copperMaterial);
+            stud.position.y = 0.18;
+            lvGroup.add(stud);
+            lvGroup.position.set(xPos, 3.25, -0.15);
+            return lvGroup;
+        }
+        for (let j = 0; j < 4; j++) {
+            transformerGroup.add(createLVBushing((j - 1.5) * 0.65));
+        }
+
+        // H. FRONT MARSHALLING KIOSK & DIAGNOSTIC CONTROL BOX (ENHANCED!)
+        const kioskGeo = new THREE.BoxGeometry(1.2, 1.4, 0.45);
+        const kioskMesh = new THREE.Mesh(kioskGeo, new THREE.MeshStandardMaterial({
+            color: 0x162238,
+            metalness: 0.9,
+            roughness: 0.25
+        }));
+        kioskMesh.position.set(0, 1.5, 1.35);
+        kioskMesh.castShadow = true;
+        transformerGroup.add(kioskMesh);
+
+        // Kiosk Glass Window with Cyber Digital Display Texture
+        const windowGeo = new THREE.PlaneGeometry(0.95, 0.7);
+        const windowMat = new THREE.MeshBasicMaterial({ color: 0x00F0FF, transparent: true, opacity: 0.85 });
+        const displayScreen = new THREE.Mesh(windowGeo, windowMat);
+        displayScreen.position.set(0, 1.65, 1.58);
+        transformerGroup.add(displayScreen);
+
+        // Physical Push Buttons & Warning Label on Kiosk
+        const btnEmergency = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.06, 0.06, 0.05, 16),
+            new THREE.MeshBasicMaterial({ color: 0xFF3366 })
+        );
+        btnEmergency.rotation.x = Math.PI / 2;
+        btnEmergency.position.set(-0.35, 1.15, 1.58);
+        transformerGroup.add(btnEmergency);
+
+        const btnReset = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.05, 0.05, 0.05, 16),
+            new THREE.MeshBasicMaterial({ color: 0x00E676 })
+        );
+        btnReset.rotation.x = Math.PI / 2;
+        btnReset.position.set(-0.18, 1.15, 1.58);
+        transformerGroup.add(btnReset);
+
+        // IEEE Warning Hazard Sign on Box
+        const signGeo = new THREE.PlaneGeometry(0.4, 0.2);
+        const signMat = new THREE.MeshBasicMaterial({ color: 0xFFA400 });
+        const signMesh = new THREE.Mesh(signGeo, signMat);
+        signMesh.position.set(0.25, 1.15, 1.58);
+        transformerGroup.add(signMesh);
+
+        // -------------------------------------------------------------
+        // 4. ANIMATED GLOWING CONDUITS & DATA PACKETS (LIVE DATA COLLECTION)
+        // -------------------------------------------------------------
+        // Wires connecting the 4 physical sensors to the central Marshalling Box
+        const conduitPaths = [];
+        const packetSpheres = [];
+
+        function createDataConduit(startVec, endVec, colorHex) {
+            const mid1 = new THREE.Vector3(startVec.x, startVec.y - 0.4, startVec.z);
+            const mid2 = new THREE.Vector3(endVec.x + (startVec.x > 0 ? 0.3 : -0.3), startVec.y - 0.4, endVec.z);
+            const curve = new THREE.CatmullRomCurve3([startVec, mid1, mid2, endVec]);
+
+            const tubeGeo = new THREE.TubeGeometry(curve, 32, 0.02, 8, false);
+            const tubeMat = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.6 });
+            const tubeMesh = new THREE.Mesh(tubeGeo, tubeMat);
+            transformerGroup.add(tubeMesh);
+
+            // Flowing Data Packet (Sphere)
+            const packet = new THREE.Mesh(
+                new THREE.SphereGeometry(0.06, 12, 12),
+                new THREE.MeshBasicMaterial({ color: 0xFFFFFF })
+            );
+            transformerGroup.add(packet);
+
+            packetSpheres.push({
+                mesh: packet,
+                curve: curve,
+                progress: Math.random()
+            });
+        }
+
+        const kioskInputPoint = new THREE.Vector3(0, 1.9, 1.35);
+
+        // -------------------------------------------------------------
+        // 5. PHYSICAL SENSOR PROBES (INTERACTIVE 3D HOTSPOTS)
+        // -------------------------------------------------------------
+        const sensors = [
+            {
+                id: 0,
+                name: "S-01 Potential Transformer (Voltage)",
+                position: new THREE.Vector3(1.1, 4.45, 0.45),
+                color: 0x00F0FF,
+                type: "voltage",
+                desc: "Monitors secondary phase-to-ground potential. Calibrated to detect IEEE 1159 voltage sags (<185V) and dielectric flashovers (>260V)."
+            },
+            {
+                id: 1,
+                name: "S-02 Rogowski Coil / CT (Current)",
+                position: new THREE.Vector3(0.0, 3.8, -0.15),
+                color: 0xFFD166,
+                type: "current",
+                desc: "High-bandwidth toroidal current sensor capturing feeder load amps and sub-cycle short-circuit overcurrent transients (>=65A)."
+            },
+            {
+                id: 2,
+                name: "S-03 Oil Temperature RTD Probe",
+                position: new THREE.Vector3(1.3, 2.8, 0.9),
+                color: 0xFF5252,
+                type: "temperature",
+                desc: "Class-A PT100 RTD immersion sensor seated in oil thermometer well to detect creeping contact resistance and winding hot-spots."
+            },
+            {
+                id: 3,
+                name: "S-04 Tri-Axial Accelerometer (Vibration)",
+                position: new THREE.Vector3(-1.95, 1.6, 0.7),
+                color: 0x48E5C2,
+                type: "vibration",
+                desc: "Piezoelectric accelerometer attached to tank sidewall measuring core magnetostriction hum (100Hz harmonic) and mechanical looseness."
+            }
+        ];
+
+        const sensorObjects = [];
+        sensors.forEach(s => {
+            const probeGroup = new THREE.Group();
+            probeGroup.position.copy(s.position);
+            probeGroup.userData = s;
+
+            // Core Marker Sphere
+            const coreGeo = new THREE.SphereGeometry(0.14, 16, 16);
+            const coreMat = new THREE.MeshStandardMaterial({
+                color: s.color,
+                emissive: s.color,
+                emissiveIntensity: 1.4,
+                roughness: 0.1
+            });
+            const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+            probeGroup.add(coreMesh);
+
+            // Pulsing Ring Indicator
+            const ringGeo = new THREE.RingGeometry(0.2, 0.26, 24);
+            const ringMat = new THREE.MeshBasicMaterial({
+                color: s.color,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.85
+            });
+            const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+            probeGroup.add(ringMesh);
+            probeGroup.userData.ring = ringMesh;
+
+            // Mounting Stem
+            const stem = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.025, 0.025, 0.28, 8),
+                new THREE.MeshBasicMaterial({ color: 0xCBD5E1 })
+            );
+            stem.position.y = -0.16;
+            probeGroup.add(stem);
+
+            transformerGroup.add(probeGroup);
+            sensorObjects.push(probeGroup);
+
+            // Create Animated Data Conduit from this sensor to the Kiosk!
+            createDataConduit(s.position, kioskInputPoint, s.color);
+        });
+
+        // -------------------------------------------------------------
+        // 6. FAULT PARTICLES (ELECTRICAL SPARKS)
+        // -------------------------------------------------------------
+        const sparkCount = 70;
+        const sparkGeo = new THREE.BufferGeometry();
+        const sparkPositions = new Float32Array(sparkCount * 3);
+        const sparkVelocities = [];
+
+        for (let i = 0; i < sparkCount; i++) {
+            sparkPositions[i * 3] = 0;
+            sparkPositions[i * 3 + 1] = 3.6;
+            sparkPositions[i * 3 + 2] = 0.45;
+            sparkVelocities.push(new THREE.Vector3(
+                (Math.random() - 0.5) * 0.18,
+                Math.random() * 0.16 + 0.05,
+                (Math.random() - 0.5) * 0.18
+            ));
+        }
+        sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPositions, 3));
+        const sparkMat = new THREE.PointsMaterial({
+            color: 0xFF3366,
+            size: 0.14,
+            transparent: true,
+            opacity: 0.0
+        });
+        const sparkSystem = new THREE.Points(sparkGeo, sparkMat);
+        transformerGroup.add(sparkSystem);
+
+        // -------------------------------------------------------------
+        // 7. AUDIO SYNTHESIS (50Hz HUM VIA WEB AUDIO API)
+        // -------------------------------------------------------------
+        let audioCtx = null;
+        let humGain = null;
+        let isAudioMuted = false;
+
+        function initAudio() {
+            if (audioCtx) return;
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+
+                // 50Hz Substation Transformer Hum
+                const humOsc = audioCtx.createOscillator();
+                humGain = audioCtx.createGain();
+                humOsc.type = 'sawtooth';
+                humOsc.frequency.setValueAtTime(50, audioCtx.currentTime);
+                humGain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+
+                // Low-pass filter to make it sound like an oil-filled transformer hum
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(150, audioCtx.currentTime);
+
+                humOsc.connect(filter);
+                filter.connect(humGain);
+                humGain.connect(audioCtx.destination);
+                humOsc.start();
+            } catch (e) {
+                console.log("Audio waiting for user gesture");
+            }
+        }
+
+        function toggleAudio() {
+            if (!audioCtx) initAudio();
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            isAudioMuted = !isAudioMuted;
+            if (humGain) {
+                humGain.gain.setValueAtTime(isAudioMuted ? 0 : 0.04, audioCtx.currentTime);
+            }
+            document.getElementById('sound-icon').innerText = isAudioMuted ? '🔇' : '🔊';
+            document.getElementById('btn-sound').innerHTML = isAudioMuted ? '<span>🔇</span> Audio: OFF' : '<span>🔊</span> Audio: ON';
+        }
+
+        // -------------------------------------------------------------
+        // 8. TELEMETRY, OSCILLOSCOPE, & SCENARIO ENGINE
+        // -------------------------------------------------------------
+        let currentScenario = 'normal';
+        let isLiveStreaming = true;
+        let telemetryHistory = [];
+
+        let telemetry = {
+            v: 230.1,
+            i: 24.2,
+            t: 41.8,
+            vib: 1.35
+        };
+
+        const scenarioConfigs = {
+            normal: {
+                name: "NOMINAL",
+                class: "status-normal",
+                targetV: 230.0,
+                targetI: 24.0,
+                targetT: 41.5,
+                targetVib: 1.3,
+                vNoise: 0.8,
+                iNoise: 1.2,
+                tNoise: 0.4,
+                vibNoise: 0.15,
+                lightColor: 0x00E676,
+                tankColor: 0x1E2D4A,
+                sparks: false,
+                explanation: "All telemetry parameters strictly within IEEE 1159 electrical safety band. No mechanical looseness or sensor tampering."
+            },
+            physical_fault: {
+                name: "PHYSICAL FAULT",
+                class: "status-fault",
+                targetV: 154.2,   // Symmetrical short-circuit sag
+                targetI: 98.4,    // Massive fault current
+                targetT: 86.5,    // Thermal trip threshold breached
+                targetVib: 8.4,   // Violent mechanical shudder
+                vNoise: 3.5,
+                iNoise: 5.5,
+                tNoise: 1.2,
+                vibNoise: 0.8,
+                lightColor: 0xFF3366,
+                tankColor: 0x4D1A25,
+                sparks: true,
+                explanation: "CRITICAL: Severe Overcurrent (98.4A >= 65A) with acute voltage sag (154V). Dielectric breakdown & instantaneous breaker trip required."
+            },
+            degradation: {
+                name: "DEGRADATION",
+                class: "status-degradation",
+                targetV: 214.5,
+                targetI: 36.2,
+                targetT: 72.8,   // High creeping temperature
+                targetVib: 4.6,   // Contact wear / looseness
+                vNoise: 1.2,
+                iNoise: 1.8,
+                tNoise: 0.5,
+                vibNoise: 0.3,
+                lightColor: 0xFFA400,
+                tankColor: 0x4A361A,
+                sparks: false,
+                explanation: "MAINTENANCE ADVISORY: Sustained thermal rise (72.8°C) & elevated vibration (4.6mm/s) indicating bushing insulation decay and contact oxidation."
+            },
+            data_manipulation: {
+                name: "DATA TAMPERING",
+                class: "status-manipulation",
+                targetV: 12.0,    // Near zero voltage
+                targetI: 48.0,    // High current draw
+                targetT: 94.0,    // Extreme heat with zero cooling
+                targetVib: 0.0,   // Unnatural zero vibration (flatline)
+                vNoise: 0.0,
+                iNoise: 0.0,
+                tNoise: 0.0,
+                vibNoise: 0.0,
+                lightColor: 0xB026FF,
+                tankColor: 0x3A184D,
+                sparks: false,
+                explanation: "CYBER ALERT (FDI): Physics Invariant Violation detected. 48A load current reported while voltage is dead (12V) with zero measurement entropy (flatline)."
+            }
+        };
+
+        function setScenario(scen) {
+            currentScenario = scen;
+            ['normal', 'fault', 'degrad', 'manip'].forEach(k => {
+                const el = document.getElementById(`btn-scen-${k}`);
+                if (el) el.classList.remove('active');
+            });
+            const keyMap = { normal: 'normal', physical_fault: 'fault', degradation: 'degrad', data_manipulation: 'manip' };
+            document.getElementById(`btn-scen-${keyMap[scen]}`).classList.add('active');
+
+            const cfg = scenarioConfigs[scen];
+            statusBeaconLight.color.setHex(cfg.lightColor);
+            beaconDome.material.color.setHex(cfg.lightColor);
+            beaconDome.material.emissive.setHex(cfg.lightColor);
+            tankMesh.material.color.setHex(cfg.tankColor);
+
+            const badge = document.getElementById('status-badge');
+            badge.className = `status-badge ${cfg.class}`;
+            badge.innerText = `● ${cfg.name}`;
+
+            document.getElementById('diag-explanation').innerHTML = `<strong>AI Root-Cause:</strong> ${cfg.explanation}`;
+
+            if (cfg.sparks) {
+                sparkMat.opacity = 0.95;
+            } else {
+                sparkMat.opacity = 0.0;
+            }
+        }
+
+        function toggleStreamMode() {
+            isLiveStreaming = !isLiveStreaming;
+            const label = document.getElementById('stream-mode-label');
+            label.innerText = isLiveStreaming ? 'LIVE (10 Hz)' : 'PAUSED';
+            label.style.color = isLiveStreaming ? '#00E676' : '#FFA400';
+            document.getElementById('btn-stream').classList.toggle('active-pulse', isLiveStreaming);
+        }
+
+        // Live Oscilloscope Waveform Renderer (Canvas 2D)
+        const oscCanvas = document.getElementById('oscilloscope-canvas');
+        const oscCtx = oscCanvas.getContext('2d');
+        let wavePhase = 0;
+
+        function drawOscilloscope() {
+            const w = oscCanvas.width;
+            const h = oscCanvas.height;
+            oscCtx.fillStyle = '#050B18';
+            oscCtx.fillRect(0, 0, w, h);
+
+            // Draw Center Grid Line
+            oscCtx.strokeStyle = 'rgba(0, 240, 255, 0.15)';
+            oscCtx.lineWidth = 1;
+            oscCtx.beginPath();
+            oscCtx.moveTo(0, h / 2);
+            oscCtx.lineTo(w, h / 2);
+            oscCtx.stroke();
+
+            // Trace 1: Voltage Waveform (Cyan)
+            oscCtx.strokeStyle = '#00F0FF';
+            oscCtx.lineWidth = 1.8;
+            oscCtx.beginPath();
+            const vAmp = (telemetry.v / 230.0) * 18;
+
+            for (let x = 0; x < w; x++) {
+                let y;
+                if (currentScenario === 'data_manipulation') {
+                    // Spoofed square wave or flatline
+                    y = h / 2 - (Math.sin((x * 0.08) + wavePhase) > 0 ? 14 : -14);
+                } else if (currentScenario === 'physical_fault') {
+                    // Chopped & sagged sine wave with high harmonics
+                    y = h / 2 - Math.sin((x * 0.08) + wavePhase) * vAmp + (Math.random() - 0.5) * 5;
+                } else {
+                    // Pure 50Hz sinusoidal voltage
+                    y = h / 2 - Math.sin((x * 0.08) + wavePhase) * vAmp;
+                }
+                if (x === 0) oscCtx.moveTo(x, y);
+                else oscCtx.lineTo(x, y);
+            }
+            oscCtx.stroke();
+
+            // Trace 2: Current Waveform (Yellow/Orange)
+            oscCtx.strokeStyle = '#FFD166';
+            oscCtx.lineWidth = 1.4;
+            oscCtx.beginPath();
+            const iAmp = (telemetry.i / 24.0) * 8;
+
+            for (let x = 0; x < w; x++) {
+                const y = h / 2 - Math.sin((x * 0.08) + wavePhase - 0.4) * iAmp;
+                if (x === 0) oscCtx.moveTo(x, y);
+                else oscCtx.lineTo(x, y);
+            }
+            oscCtx.stroke();
+
+            wavePhase += 0.18;
+        }
+
+        // Telemetry Update Loop (10 Hz)
+        setInterval(() => {
+            if (!isLiveStreaming) return;
+
+            const cfg = scenarioConfigs[currentScenario];
+
+            telemetry.v += (cfg.targetV - telemetry.v) * 0.2 + (Math.random() - 0.5) * cfg.vNoise;
+            telemetry.i += (cfg.targetI - telemetry.i) * 0.2 + (Math.random() - 0.5) * cfg.iNoise;
+            telemetry.t += (cfg.targetT - telemetry.t) * 0.15 + (Math.random() - 0.5) * cfg.tNoise;
+            telemetry.vib += (cfg.targetVib - telemetry.vib) * 0.2 + (Math.random() - 0.5) * cfg.vibNoise;
+
+            telemetry.v = Math.max(0, telemetry.v);
+            telemetry.i = Math.max(0, telemetry.i);
+            telemetry.t = Math.max(10, telemetry.t);
+            telemetry.vib = Math.max(0, telemetry.vib);
+
+            // Update DOM Values
+            document.getElementById('val-v').innerText = `${telemetry.v.toFixed(1)} V`;
+            document.getElementById('val-i').innerText = `${telemetry.i.toFixed(1)} A`;
+            document.getElementById('val-t').innerText = `${telemetry.t.toFixed(1)} °C`;
+            document.getElementById('val-vib').innerText = `${telemetry.vib.toFixed(2)} mm/s`;
+
+            document.getElementById('delta-v').innerText = `${(telemetry.v - 230).toFixed(1)}V vs 230V`;
+            document.getElementById('delta-i').innerText = `Load: ${((telemetry.v * telemetry.i) / 1000).toFixed(1)} kVA`;
+            document.getElementById('delta-t').innerText = `${(telemetry.t - 42).toFixed(1)}°C vs 42°C`;
+            document.getElementById('delta-vib').innerText = `${(telemetry.vib - 1.35).toFixed(2)} vs 1.35mm/s`;
+
+            document.getElementById('stream-ticker').innerText = 
+                `V=${telemetry.v.toFixed(1)}V | I=${telemetry.i.toFixed(1)}A | T=${telemetry.t.toFixed(1)}°C | Vib=${telemetry.vib.toFixed(2)}mm/s`;
+
+            const now = new Date();
+            const timeStr = now.toTimeString().split(' ')[0];
+            document.getElementById('sim-clock').innerText = timeStr;
+
+            // Log Telemetry Packet into Recent Drawer Table
+            telemetryHistory.unshift({
+                time: timeStr,
+                v: telemetry.v.toFixed(1),
+                i: telemetry.i.toFixed(1),
+                t: telemetry.t.toFixed(1),
+                vib: telemetry.vib.toFixed(2),
+                cond: cfg.name,
+                conf: (94 + Math.random() * 5).toFixed(1) + '%'
+            });
+            if (telemetryHistory.length > 8) telemetryHistory.pop();
+
+            updateDrawerTable();
+            drawOscilloscope();
+
+        }, 100);
+
+        function updateDrawerTable() {
+            const tbody = document.getElementById('telemetry-table-body');
+            tbody.innerHTML = telemetryHistory.map(row => `
+                <tr>
+                    <td>${row.time}</td>
+                    <td style="color: #00F0FF;">${row.v}</td>
+                    <td style="color: #FFD166;">${row.i}</td>
+                    <td style="color: #FF5252;">${row.t}</td>
+                    <td style="color: #48E5C2;">${row.vib}</td>
+                    <td><strong>${row.cond}</strong></td>
+                    <td style="color: #00E676;">${row.conf}</td>
+                </tr>
+            `).join('');
+        }
+
+        function toggleDrawer() {
+            const d = document.getElementById('telemetry-drawer');
+            d.style.display = (d.style.display === 'block') ? 'none' : 'block';
+        }
+
+        // -------------------------------------------------------------
+        // 9. CAMERA VIEWS & GUIDED TOUR
+        // -------------------------------------------------------------
+        let autoRotate = false;
+        function toggleAutoRotate() {
+            autoRotate = !autoRotate;
+            controls.autoRotate = autoRotate;
+            controls.autoRotateSpeed = 1.2;
+            document.getElementById('btn-autorotate').innerHTML = autoRotate ? '<span></span> Auto-Orbit: ON' : '<span></span> Auto-Orbit: OFF';
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log("Error attempting to enable fullscreen:", err);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        function setCameraView(view) {
+            switch (view) {
+                case 'iso':
+                    moveCamera(12, 8.5, 13, 0, 1.8, 0);
+                    break;
+                case 'hv':
+                    moveCamera(0, 5.5, 4.0, 0, 3.4, 0.45);
+                    break;
+                case 'panel':
+                    moveCamera(0, 2.2, 4.6, 0, 1.5, 1.35);
+                    break;
+                case 'thermal':
+                    moveCamera(3.0, 3.4, 2.8, 1.3, 2.8, 0.9);
+                    break;
+                case 'top':
+                    moveCamera(0.1, 15, 0, 0, 1.8, 0);
+                    break;
+                case 'radiator':
+                    moveCamera(4.8, 2.5, 0.2, 2.2, 1.8, 0);
+                    break;
+            }
+        }
+
+        function focusSensor(idx) {
+            const s = sensors[idx];
+            moveCamera(s.position.x + 2.0, s.position.y + 1.2, s.position.z + 2.5, s.position.x, s.position.y, s.position.z);
+            document.getElementById('sensor-specs').innerHTML = 
+                `<span style="color: var(--electric-blue); font-weight: 700;">${s.name}:</span> ${s.desc}`;
+        }
+
+        function moveCamera(px, py, pz, tx, ty, tz, onComplete) {
+            let startPos = camera.position.clone();
+            let endPos = new THREE.Vector3(px, py, pz);
+            let startTarget = controls.target.clone();
+            let endTarget = new THREE.Vector3(tx, ty, tz);
+            let progress = 0;
+
+            function anim() {
+                progress += 0.045;
+                camera.position.lerpVectors(startPos, endPos, progress);
+                controls.target.lerpVectors(startTarget, endTarget, progress);
+                controls.update();
+                if (progress < 1) {
+                    requestAnimationFrame(anim);
+                } else if (onComplete) {
+                    onComplete();
+                }
+            }
+            anim();
+        }
+
+        // Guided Sensor Tour (Walkthrough)
+        let tourIndex = 0;
+        function startGuidedTour() {
+            tourIndex = 0;
+            runTourStep();
+        }
+
+        function runTourStep() {
+            if (tourIndex >= sensors.length) {
+                setCameraView('iso');
+                document.getElementById('sensor-specs').innerHTML = 
+                    `<span style="color: #00E676; font-weight: 700;">✅ Guided Tour Completed:</span> All 4 cyber-physical sensor collection nodes verified.`;
+                return;
+            }
+            focusSensor(tourIndex);
+            tourIndex++;
+            setTimeout(runTourStep, 3800);
+        }
+
+        // -------------------------------------------------------------
+        // 10. RAYCASTING & INTERACTIVE TOOLTIPS
+        // -------------------------------------------------------------
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const tooltip = document.getElementById('sensor-tooltip');
+
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(sensorObjects, true);
+
+            if (intersects.length > 0) {
+                let obj = intersects[0].object;
+                while (obj.parent && !obj.userData.name) {
+                    obj = obj.parent;
+                }
+                const s = obj.userData;
+                if (s && s.name) {
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = `${e.clientX + 14}px`;
+                    tooltip.style.top = `${e.clientY + 14}px`;
+                    tooltip.innerHTML = `<div class="tooltip-title">${s.name}</div><div>${s.desc}</div>`;
+                    document.body.style.cursor = 'pointer';
+                    return;
+                }
+            }
+            tooltip.style.display = 'none';
+            document.body.style.cursor = 'default';
+        });
+
+        window.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON' || e.target.closest('.panel-card') || e.target.closest('#telemetry-drawer')) return;
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(sensorObjects, true);
+            if (intersects.length > 0) {
+                let obj = intersects[0].object;
+                while (obj.parent && !obj.userData.name) {
+                    obj = obj.parent;
+                }
+                const s = obj.userData;
+                if (s && s.name) {
+                    focusSensor(s.id);
+                }
+            }
+        });
+
+        // -------------------------------------------------------------
+        // 11. MAIN ANIMATION LOOP
+        // -------------------------------------------------------------
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const elapsedTime = clock.getElapsedTime();
+
+            // 1. Pulse Sensor Indicator Rings
+            sensorObjects.forEach((probe, idx) => {
+                if (probe.userData.ring) {
+                    const scale = 1.0 + 0.28 * Math.sin(elapsedTime * 4.5 + idx);
+                    probe.userData.ring.scale.set(scale, scale, scale);
+                    probe.userData.ring.lookAt(camera.position);
+                }
+            });
+
+            // 2. Animate Flowing Data Packets along Conduits
+            packetSpheres.forEach(p => {
+                p.progress += 0.012;
+                if (p.progress > 1) p.progress = 0;
+                const point = p.curve.getPoint(p.progress);
+                p.mesh.position.copy(point);
+            });
+
+            // 3. Spin Radiator Cooling Fans (Faster when Hot!)
+            const fanSpeed = telemetry.t > 60 ? 0.25 : 0.08;
+            fanBladesList.forEach(fan => {
+                fan.rotation.x += fanSpeed;
+            });
+
+            // 4. Physical Equipment Vibration Jitter (Based on telemetry.vib)
+            if (telemetry.vib > 2.0) {
+                const vibMag = (telemetry.vib - 1.5) * 0.006;
+                tankMesh.position.x = (Math.random() - 0.5) * vibMag;
+                tankMesh.position.z = (Math.random() - 0.5) * vibMag;
+            } else {
+                tankMesh.position.x = 0;
+                tankMesh.position.z = 0;
+            }
+
+            // 5. Animate Fault Sparks
+            if (scenarioConfigs[currentScenario].sparks) {
+                const pos = sparkGeo.attributes.position.array;
+                for (let i = 0; i < sparkCount; i++) {
+                    pos[i * 3] += sparkVelocities[i].x;
+                    pos[i * 3 + 1] += sparkVelocities[i].y;
+                    pos[i * 3 + 2] += sparkVelocities[i].z;
+
+                    sparkVelocities[i].y -= 0.007; // Gravity
+
+                    if (pos[i * 3 + 1] < 1.0) {
+                        pos[i * 3] = (Math.random() - 0.5) * 0.4;
+                        pos[i * 3 + 1] = 3.5;
+                        pos[i * 3 + 2] = 0.45 + (Math.random() - 0.5) * 0.4;
+                        sparkVelocities[i].set(
+                            (Math.random() - 0.5) * 0.16,
+                            Math.random() * 0.14 + 0.05,
+                            (Math.random() - 0.5) * 0.16
+                        );
+                    }
+                }
+                sparkGeo.attributes.position.needsUpdate = true;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // Responsive Resizing
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
